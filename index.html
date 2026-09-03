@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PHM Team</title>
+
+  <link rel="stylesheet" href="styles.css" />
+</head>
+
+<body>
+
+  <main class="team-section">
+
+    <div class="section-heading">
+      <span class="eyebrow">PRAGUE HOCKEY MASTERS</span>
+      <h1>KDO STOJÍ ZA PHM</h1>
+      <p>Lidé, kteří drží PHM v pohybu.</p>
+    </div>
+
+    <div class="carousel-wrap">
+
+      <button class="carousel-btn prev" id="prevBtn" aria-label="Předchozí">
+        ‹
+      </button>
+
+      <div class="team-carousel" id="teamCarousel"></div>
+
+      <button class="carousel-btn next" id="nextBtn" aria-label="Další">
+        ›
+      </button>
+
+    </div>
+
+  </main>
+
+
+  <!-- DETAIL MODAL -->
+  <div class="modal" id="memberModal">
+
+    <div class="modal-backdrop"></div>
+
+    <div class="modal-card">
+
+      <button class="modal-close" id="modalClose">
+        ×
+      </button>
+
+      <div class="modal-photo-wrap">
+        <img id="modalPhoto" src="" alt="">
+      </div>
+
+      <div class="modal-content">
+
+        <span class="modal-label">PHM TEAM</span>
+
+        <h2 id="modalName"></h2>
+
+        <div class="modal-job" id="modalJob"></div>
+
+        <div class="modal-since" id="modalSince"></div>
+
+        <p id="modalDetail"></p>
+
+        <a id="modalEmail" class="email-button" href=""></a>
+
+      </div>
+
+    </div>
+
+  </div>
+
+
+  <script src="app.js"></script>
+
+</body>
+</html>
