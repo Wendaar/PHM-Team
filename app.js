@@ -1,26 +1,50 @@
 /* =========================================================
    PHM TEAM
-   Data source: Google Sheet
+   Google Sheet driven
 ========================================================= */
 
-const SHEET_ID = "12lxrxxyCUwbbFqv93NMNqyhpOUoXbyml00mnNSKGjQ0";
-const SHEET_GID = "1340186546";
+const SHEET_ID =
+  "12lxrxxyCUwbbFqv93NMNqyhpOUoXbyml00mnNSKGjQ0";
 
-const SHEET_URL =
-  `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq` +
-  `?tqx=out:json&gid=${SHEET_GID}`;
+const PEOPLE_GID =
+  "1340186546";
+
+/*
+  Záložka s databází týmů.
+  Podle tebe se jmenuje "Tems".
+*/
+const TEAMS_SHEET_NAME =
+  "Tems";
+
+/*
+  V záložce Tems:
+  R = logo URL
+  R je 18. sloupec => index 17
+*/
+const TEAM_LOGO_COLUMN = 17;
 
 
 /* =========================================================
-   GROUP FROM URL
-   default: core
-
-   Example:
-   ?group=core
-   ?group=referees
+   URLs
 ========================================================= */
 
-const params = new URLSearchParams(window.location.search);
+const PEOPLE_URL =
+  `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq` +
+  `?tqx=out:json&gid=${PEOPLE_GID}`;
+
+const TEAMS_URL =
+  `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq` +
+  `?tqx=out:json&sheet=${encodeURIComponent(TEAMS_SHEET_NAME)}`;
+
+
+/* =========================================================
+   GROUP
+========================================================= */
+
+const params =
+  new URLSearchParams(
+    window.location.search
+  );
 
 const selectedGroup =
   (params.get("group") || "core")
@@ -33,23 +57,102 @@ const selectedGroup =
 ========================================================= */
 
 const carousel =
-  document.getElementById("teamCarousel");
+  document.getElementById(
+    "teamCarousel"
+  );
 
 const modal =
-  document.getElementById("memberModal");
+  document.getElementById(
+    "memberModal"
+  );
 
 const modalClose =
-  document.getElementById("modalClose");
+  document.getElementById(
+    "modalClose"
+  );
 
 const prevBtn =
-  document.getElementById("prevBtn");
+  document.getElementById(
+    "prevBtn"
+  );
 
 const nextBtn =
-  document.getElementById("nextBtn");
+  document.getElementById(
+    "nextBtn"
+  );
 
 
 /* =========================================================
-   LOAD DATA
+   TEAM LOGOS CONTAINER
+   Vytvoříme ho automaticky.
+   Nemusíš měnit index.html.
+========================================================= */
+
+const modalContent =
+  document.querySelector(
+    ".modal-content"
+  );
+
+const modalTeams =
+  document.createElement(
+    "div"
+  );
+
+modalTeams.id =
+  "modalTeams";
+
+modalTeams.className =
+  "modal-teams";
+
+modalContent.appendChild(
+  modalTeams
+);
+
+
+/* =========================================================
+   LOAD GOOGLE GVIZ
+========================================================= */
+
+async function loadGoogleSheet(url) {
+
+  const response =
+    await fetch(url);
+
+  if (!response.ok) {
+    throw new Error(
+      "Google Sheet se nepodařilo načíst."
+    );
+  }
+
+  const text =
+    await response.text();
+
+  const start =
+    text.indexOf("{");
+
+  const end =
+    text.lastIndexOf("}");
+
+  if (
+    start === -1 ||
+    end === -1
+  ) {
+    throw new Error(
+      "Neplatná odpověď Google Sheetu."
+    );
+  }
+
+  return JSON.parse(
+    text.substring(
+      start,
+      end + 1
+    )
+  );
+}
+
+
+/* =========================================================
+   START
 ========================================================= */
 
 async function loadTeam() {
@@ -62,58 +165,40 @@ async function loadTeam() {
       </div>
     `;
 
-    const response =
-      await fetch(SHEET_URL);
-
-    if (!response.ok) {
-      throw new Error(
-        "Google Sheet se nepodařilo načíst."
-      );
-    }
-
-    const text =
-      await response.text();
-
 
     /*
-      Google neposílá čistý JSON.
-      Vrací něco ve stylu:
-
-      google.visualization.Query.setResponse({...});
-
-      Proto vytáhneme pouze JSON část.
+      Lidi + databázi týmů
+      načteme současně.
     */
 
-    const jsonStart =
-      text.indexOf("{");
+    const [
+      peopleData,
+      teamsData
+    ] = await Promise.all([
 
-    const jsonEnd =
-      text.lastIndexOf("}");
+      loadGoogleSheet(
+        PEOPLE_URL
+      ),
 
-    if (
-      jsonStart === -1 ||
-      jsonEnd === -1
-    ) {
-      throw new Error(
-        "Neplatná odpověď Google Sheetu."
-      );
-    }
+      loadGoogleSheet(
+        TEAMS_URL
+      )
 
-    const json =
-      JSON.parse(
-        text.substring(
-          jsonStart,
-          jsonEnd + 1
-        )
-      );
-
-
-    const rows =
-      json.table.rows || [];
+    ]);
 
 
     /* =====================================================
-       MAP SHEET COLUMNS
+       CREATE TEAM LOGO LOOKUP
+    ===================================================== */
+
+    const teamLookup =
+      buildTeamLookup(
+        teamsData
+      );
+
+
+    /* =====================================================
+       PEOPLE
 
        A = ID
        B = Group
@@ -127,74 +212,134 @@ async function loadTeam() {
        J = PHM Since
        K = Order
        L = Active
+       M = Teams
     ===================================================== */
+
+    const rows =
+      peopleData.table.rows || [];
 
     const team =
-      rows.map((row, index) => {
+      rows.map(
+        (row, index) => {
 
-        const cells =
-          row.c || [];
+          const cells =
+            row.c || [];
 
-        return {
+          return {
 
-          id:
-            getCell(cells, 0) ||
-            `member-${index + 1}`,
+            id:
+              getCell(
+                cells,
+                0
+              ) ||
+              `member-${index + 1}`,
 
-          group:
-            getCell(cells, 1)
-              .trim()
-              .toLowerCase(),
+            group:
+              getCell(
+                cells,
+                1
+              )
+                .trim()
+                .toLowerCase(),
 
-          firstName:
-            getCell(cells, 2),
+            firstName:
+              getCell(
+                cells,
+                2
+              ),
 
-          fullName:
-            getCell(cells, 3),
+            fullName:
+              getCell(
+                cells,
+                3
+              ),
 
-          jobTitle:
-            getCell(cells, 4),
+            jobTitle:
+              getCell(
+                cells,
+                4
+              ),
 
-          photo1:
-            getCell(cells, 5),
+            photo1:
+              getCell(
+                cells,
+                5
+              ),
 
-          photo2:
-            getCell(cells, 6),
+            photo2:
+              getCell(
+                cells,
+                6
+              ),
 
-          detail:
-            getCell(cells, 7),
+            detail:
+              getCell(
+                cells,
+                7
+              ),
 
-          email:
-            getCell(cells, 8),
+            email:
+              getCell(
+                cells,
+                8
+              ),
 
-          since:
-            getCell(cells, 9),
+            since:
+              getCell(
+                cells,
+                9
+              ),
 
-          order:
-            Number(
-              getCell(cells, 10)
-            ) || 999,
+            order:
+              Number(
+                getCell(
+                  cells,
+                  10
+                )
+              ) || 999,
 
-          active:
-            parseBoolean(
-              getCell(cells, 11)
-            )
+            active:
+              parseBoolean(
+                getCell(
+                  cells,
+                  11
+                )
+              ),
 
-        };
+            /*
+              M = Teams
 
-      });
+              podporujeme:
 
+              Fanklub Lev, PÚ
 
-    /* =====================================================
-       FILTER
-    ===================================================== */
+              nebo:
+
+              Fanklub Lev; PÚ
+            */
+
+            teams:
+              splitTeams(
+                getCell(
+                  cells,
+                  12
+                )
+              )
+
+          };
+
+        }
+      );
+
 
     const visibleMembers =
       team
-        .filter(person =>
-          person.active === true &&
-          person.group === selectedGroup &&
-          person.fullName
+        .filter(
+          person =>
+            person.active &&
+            person.group ===
+              selectedGroup &&
+            person.fullName
         )
         .sort(
           (a, b) =>
@@ -203,7 +348,8 @@ async function loadTeam() {
 
 
     renderTeam(
-      visibleMembers
+      visibleMembers,
+      teamLookup
     );
 
 
@@ -226,14 +372,169 @@ async function loadTeam() {
 
 
 /* =========================================================
-   GET CELL VALUE
+   TEAM DATABASE
+========================================================= */
 
-   Google někdy vrací:
-   v = skutečnou hodnotu
-   f = formátovanou hodnotu
+function buildTeamLookup(
+  data
+) {
 
-   Pro naše data je nejlepší použít f, pokud existuje,
-   jinak v.
+  const lookup =
+    new Map();
+
+  const rows =
+    data.table.rows || [];
+
+  const columns =
+    data.table.cols || [];
+
+
+  /*
+    Zkusíme sami zjistit,
+    ve kterém sloupci je název týmu.
+
+    Hledáme běžné názvy záhlaví.
+  */
+
+  const possibleNames = [
+    "team",
+    "team name",
+    "name",
+    "název",
+    "nazev",
+    "název týmu",
+    "nazev tymu",
+    "tým",
+    "tym"
+  ];
+
+
+  let teamNameColumn =
+    columns.findIndex(
+      column => {
+
+        const label =
+          normalizeText(
+            column.label || ""
+          );
+
+        return possibleNames
+          .map(normalizeText)
+          .includes(label);
+
+      }
+    );
+
+
+  /*
+    Pokud nenajdeme záhlaví,
+    použijeme sloupec A.
+
+    Kdyby byl název týmu
+    v Tems jinde, stačí pak
+    změnit pouze tento fallback.
+  */
+
+  if (teamNameColumn < 0) {
+    teamNameColumn = 0;
+  }
+
+
+  rows.forEach(row => {
+
+    const cells =
+      row.c || [];
+
+    const name =
+      getCell(
+        cells,
+        teamNameColumn
+      ).trim();
+
+    const logo =
+      getCell(
+        cells,
+        TEAM_LOGO_COLUMN
+      ).trim();
+
+
+    if (
+      !name ||
+      !logo
+    ) {
+      return;
+    }
+
+
+    lookup.set(
+      normalizeText(name),
+      {
+        name,
+        logo
+      }
+    );
+
+  });
+
+
+  console.log(
+    "PHM teams loaded:",
+    lookup
+  );
+
+  return lookup;
+}
+
+
+/* =========================================================
+   SPLIT TEAMS
+========================================================= */
+
+function splitTeams(value) {
+
+  if (!value) {
+    return [];
+  }
+
+  return String(value)
+    .split(/[;,]/)
+    .map(
+      team =>
+        team.trim()
+    )
+    .filter(Boolean);
+}
+
+
+/* =========================================================
+   NORMALIZE NAME
+
+   "PÚ" a "pú"
+   budou odpovídat.
+
+   Odstraníme také diakritiku
+   kvůli tolerantnějšímu párování.
+========================================================= */
+
+function normalizeText(value) {
+
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(
+      /[\u0300-\u036f]/g,
+      ""
+    )
+    .replace(
+      /\s+/g,
+      " "
+    );
+}
+
+
+/* =========================================================
+   CELL VALUE
 ========================================================= */
 
 function getCell(
@@ -267,12 +568,11 @@ function getCell(
   }
 
   return "";
-
 }
 
 
 /* =========================================================
-   TRUE / FALSE
+   BOOLEAN
 ========================================================= */
 
 function parseBoolean(value) {
@@ -288,24 +588,35 @@ function parseBoolean(value) {
     normalized === "yes" ||
     normalized === "ano"
   );
-
 }
 
 
 /* =========================================================
-   RENDER TEAM
+   RENDER CARDS
 ========================================================= */
 
-function renderTeam(team) {
+let currentTeamLookup =
+  new Map();
 
-  carousel.innerHTML = "";
+
+function renderTeam(
+  team,
+  teamLookup
+) {
+
+  currentTeamLookup =
+    teamLookup;
+
+  carousel.innerHTML =
+    "";
 
 
   if (!team.length) {
 
     carousel.innerHTML = `
       <div class="team-error">
-        Pro skupinu "${selectedGroup}"
+        Pro skupinu
+        "${selectedGroup}"
         nejsou žádní aktivní členové.
       </div>
     `;
@@ -313,7 +624,6 @@ function renderTeam(team) {
     hideArrows();
 
     return;
-
   }
 
 
@@ -334,84 +644,50 @@ function renderTeam(team) {
       );
 
 
-      /* ===================================================
-         IMAGE
-
-         F = Photo 1 URL
-      =================================================== */
-
-      const photo =
-        person.photo1 || "";
-
-
       card.innerHTML = `
 
         <img
-          src="${escapeHTML(photo)}"
-          alt="${escapeHTML(person.fullName)}"
+          src="${escapeHTML(
+            person.photo1
+          )}"
+          alt="${escapeHTML(
+            person.fullName
+          )}"
           loading="lazy"
         >
 
         <div class="card-number">
-
-          ${String(index + 1)
-            .padStart(2, "0")}
-
+          ${String(
+            index + 1
+          ).padStart(
+            2,
+            "0"
+          )}
         </div>
 
         <div class="card-info">
 
           <div class="card-firstname">
-
             ${escapeHTML(
               person.firstName
             )}
-
           </div>
 
           <div class="card-fullname">
-
             ${escapeHTML(
               person.fullName
             )}
-
           </div>
 
           <div class="card-job">
-
             ${escapeHTML(
               person.jobTitle
             )}
-
           </div>
 
         </div>
-
       `;
 
-
-      /* Broken image fallback */
-
-      const img =
-        card.querySelector("img");
-
-      img.addEventListener(
-        "error",
-        () => {
-
-          console.warn(
-            "Nepodařilo se načíst fotku:",
-            photo
-          );
-
-          img.style.opacity =
-            "0";
-
-        }
-      );
-
-
-      /* CLICK */
 
       card.addEventListener(
         "click",
@@ -422,15 +698,15 @@ function renderTeam(team) {
       );
 
 
-      /* ENTER / SPACE */
-
       card.addEventListener(
         "keydown",
         event => {
 
           if (
-            event.key === "Enter" ||
-            event.key === " "
+            event.key ===
+              "Enter" ||
+            event.key ===
+              " "
           ) {
 
             event.preventDefault();
@@ -438,7 +714,6 @@ function renderTeam(team) {
             openMember(
               person
             );
-
           }
 
         }
@@ -454,12 +729,11 @@ function renderTeam(team) {
 
 
   showArrowsIfNeeded();
-
 }
 
 
 /* =========================================================
-   OPEN MEMBER DETAIL
+   OPEN DETAIL
 ========================================================= */
 
 function openMember(person) {
@@ -495,13 +769,6 @@ function openMember(person) {
     );
 
 
-  /*
-    Detail používá Photo 2.
-
-    Pokud G není vyplněné,
-    použije se Photo 1.
-  */
-
   modalPhoto.src =
     person.photo2 ||
     person.photo1 ||
@@ -509,7 +776,6 @@ function openMember(person) {
 
   modalPhoto.alt =
     person.fullName;
-
 
   modalName.textContent =
     person.fullName;
@@ -532,7 +798,6 @@ function openMember(person) {
 
     modalSince.style.display =
       "none";
-
   }
 
 
@@ -559,8 +824,14 @@ function openMember(person) {
 
     modalEmail.style.display =
       "none";
-
   }
+
+
+  /* TEAM LOGOS */
+
+  renderMemberTeams(
+    person.teams
+  );
 
 
   modal.classList.add(
@@ -569,7 +840,136 @@ function openMember(person) {
 
   document.body.style.overflow =
     "hidden";
+}
 
+
+/* =========================================================
+   MEMBER TEAMS
+========================================================= */
+
+function renderMemberTeams(
+  teams
+) {
+
+  modalTeams.innerHTML =
+    "";
+
+
+  /*
+    Prázdná buňka M?
+    Nezobrazíme vůbec nic.
+  */
+
+  if (
+    !teams ||
+    teams.length === 0
+  ) {
+
+    modalTeams.style.display =
+      "none";
+
+    return;
+  }
+
+
+  const logos =
+    [];
+
+
+  teams.forEach(teamName => {
+
+    const team =
+      currentTeamLookup.get(
+        normalizeText(
+          teamName
+        )
+      );
+
+
+    /*
+      Tým v M existuje,
+      ale nenajdeme ho v Tems?
+      Jen ho přeskočíme.
+      Detail se nerozbije.
+    */
+
+    if (!team) {
+
+      console.warn(
+        `Team "${teamName}" nebyl nalezen v záložce Tems.`
+      );
+
+      return;
+    }
+
+
+    const item =
+      document.createElement(
+        "div"
+      );
+
+    item.className =
+      "modal-team-logo";
+
+    /*
+      title = jednoduchý tooltip
+      při mouseoveru.
+    */
+
+    item.title =
+      team.name;
+
+
+    const img =
+      document.createElement(
+        "img"
+      );
+
+    img.src =
+      team.logo;
+
+    img.alt =
+      team.name;
+
+    img.loading =
+      "lazy";
+
+
+    item.appendChild(
+      img
+    );
+
+    logos.push(
+      item
+    );
+
+  });
+
+
+  /*
+    Když se nenašlo žádné logo,
+    oblast úplně skryjeme.
+  */
+
+  if (!logos.length) {
+
+    modalTeams.style.display =
+      "none";
+
+    return;
+  }
+
+
+  logos.forEach(
+    logo =>
+      modalTeams.appendChild(
+        logo
+      )
+  );
+
+
+  modalTeams.style.display =
+    "flex";
 }
 
 
@@ -610,14 +1010,14 @@ document.addEventListener(
   event => {
 
     if (
-      event.key === "Escape" &&
+      event.key ===
+        "Escape" &&
       modal.classList.contains(
         "open"
       )
     ) {
 
       closeModal();
-
     }
 
   }
@@ -628,21 +1028,43 @@ document.addEventListener(
    CAROUSEL
 ========================================================= */
 
+function getCardStep() {
+
+  const card =
+    carousel.querySelector(
+      ".member-card"
+    );
+
+  if (!card) {
+    return 280;
+  }
+
+  const styles =
+    window.getComputedStyle(
+      carousel
+    );
+
+  const gap =
+    parseFloat(
+      styles.gap
+    ) || 18;
+
+  return (
+    card.offsetWidth +
+    gap
+  );
+}
+
+
 nextBtn.addEventListener(
   "click",
   () => {
 
     carousel.scrollBy({
-
       left:
-        Math.min(
-          carousel.clientWidth * 0.8,
-          600
-        ),
-
+        getCardStep(),
       behavior:
         "smooth"
-
     });
 
   }
@@ -654,16 +1076,10 @@ prevBtn.addEventListener(
   () => {
 
     carousel.scrollBy({
-
       left:
-        -Math.min(
-          carousel.clientWidth * 0.8,
-          600
-        ),
-
+        -getCardStep(),
       behavior:
         "smooth"
-
     });
 
   }
@@ -681,33 +1097,28 @@ function hideArrows() {
 
   nextBtn.style.display =
     "none";
-
 }
 
 
 function showArrowsIfNeeded() {
-
-  /*
-    Na desktopu necháváme šipky.
-    CSS je samo schová na mobilu.
-  */
 
   prevBtn.style.display =
     "";
 
   nextBtn.style.display =
     "";
-
 }
 
 
 /* =========================================================
-   BASIC HTML SAFETY
+   ESCAPE HTML
 ========================================================= */
 
 function escapeHTML(value) {
 
-  return String(value || "")
+  return String(
+    value || ""
+  )
     .replaceAll(
       "&",
       "&amp;"
@@ -728,12 +1139,11 @@ function escapeHTML(value) {
       "'",
       "&#039;"
     );
-
 }
 
 
 /* =========================================================
-   START
+   GO
 ========================================================= */
 
 loadTeam();
