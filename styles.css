@@ -521,3 +521,121 @@ body {
   }
 
 }
+/* =========================
+   TEAM LOGOS IN DETAIL
+========================= */
+
+.modal-content {
+  position: relative;
+  padding-bottom: 105px;
+}
+
+.modal-teams {
+  position: absolute;
+
+  right: 35px;
+  bottom: 28px;
+
+  display: none;
+
+  align-items: center;
+  justify-content: flex-end;
+
+  gap: 9px;
+}
+
+.modal-team-logo {
+  width: 46px;
+  height: 46px;
+
+  border-radius: 50%;
+
+  background: rgba(255,255,255,.96);
+
+  border: 2px solid rgba(255,255,255,.22);
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  padding: 4px;
+
+  cursor: help;
+
+  box-shadow:
+    0 5px 15px rgba(0,0,0,.35);
+
+  transition:
+    transform .2s ease,
+    box-shadow .2s ease;
+}
+
+.modal-team-logo:hover {
+  transform:
+    translateY(-4px)
+    scale(1.08);
+
+  box-shadow:
+    0 10px 25px rgba(0,0,0,.45);
+}
+
+.modal-team-logo img {
+  width: 100%;
+  height: 100%;
+
+  object-fit: contain;
+
+  border-radius: 50%;
+}
+
+
+/* =========================
+   DARK PHM BACKGROUND
+========================= */
+
+.team-section {
+  background:
+    radial-gradient(
+      circle at 45% 0%,
+      #22262b 0%,
+      #111315 42%,
+      #080909 100%
+    );
+}
+
+.modal-card {
+  background:
+    linear-gradient(
+      145deg,
+      #1a1d20,
+      #0b0c0d
+    );
+}
+
+
+/* =========================
+   MOBILE
+========================= */
+
+@media (max-width: 700px) {
+
+  .modal-content {
+    padding-bottom: 35px;
+  }
+
+  .modal-teams {
+    position: static;
+
+    margin-top: 25px;
+
+    justify-content: flex-start;
+
+    flex-wrap: wrap;
+  }
+
+  .modal-team-logo {
+    width: 42px;
+    height: 42px;
+  }
+
+}
