@@ -13,8 +13,7 @@ const PEOPLE_GID =
   Záložka s databází týmů.
   Podle tebe se jmenuje "Tems".
 */
-const TEAMS_SHEET_NAME =
-  "Tems";
+const TEAMS_SHEET_NAME = "Teams";
 
 /*
   V záložce Tems:
