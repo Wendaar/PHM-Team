@@ -9,9 +9,6 @@ const SHEET_ID =
 const PEOPLE_GID =
   "1340186546";
 
-/*
-  Databáze týmů
-*/
 const TEAMS_SHEET_NAME =
   "Teams";
 
@@ -19,11 +16,43 @@ const TEAMS_SHEET_NAME =
   Teams sheet:
   A = Full team name
   R = Logo URL
-
-  R je 18. sloupec => index 17
 */
 const TEAM_NAME_COLUMN = 0;
 const TEAM_LOGO_COLUMN = 17;
+
+
+/* =========================================================
+   GROUP TEXTS
+   TADY SI KDYKOLI UPRAVÍŠ NADPISY A PODNADPISY
+========================================================= */
+
+const GROUP_CONFIG = {
+
+  core: {
+    eyebrow: "PRAGUE HOCKEY MASTERS",
+    title: "KDO STOJÍ ZA PHM",
+    subtitle: "Lidé, kteří drží PHM v pohybu."
+  },
+
+  disciplinary_team: {
+    eyebrow: "PRAGUE HOCKEY MASTERS",
+    title: "DISCIPLINÁRNÍ KOMISE",
+    subtitle: "Tým, který dohlíží na pravidla a férovost soutěže."
+  },
+
+  timekeepers: {
+    eyebrow: "PRAGUE HOCKEY MASTERS",
+    title: "TÝM ČASOMĚŘIČŮ",
+    subtitle: "Lidé, kteří drží zápasy pod kontrolou."
+  },
+
+  referees: {
+    eyebrow: "PRAGUE HOCKEY MASTERS",
+    title: "TÝM ROZHODČÍCH",
+    subtitle: "Rozhodčí PHM Cupu."
+  }
+
+};
 
 
 /* =========================================================
@@ -85,8 +114,51 @@ const nextBtn =
 
 
 /* =========================================================
+   DYNAMIC HEADING
+========================================================= */
+
+const eyebrowElement =
+  document.querySelector(
+    ".eyebrow"
+  );
+
+const titleElement =
+  document.querySelector(
+    ".section-heading h1"
+  );
+
+const subtitleElement =
+  document.querySelector(
+    ".section-heading p"
+  );
+
+
+function applyGroupHeading() {
+
+  const config =
+    GROUP_CONFIG[selectedGroup] ||
+    GROUP_CONFIG.core;
+
+  if (eyebrowElement) {
+    eyebrowElement.textContent =
+      config.eyebrow;
+  }
+
+  if (titleElement) {
+    titleElement.textContent =
+      config.title;
+  }
+
+  if (subtitleElement) {
+    subtitleElement.textContent =
+      config.subtitle;
+  }
+
+}
+
+
+/* =========================================================
    TEAM LOGOS CONTAINER
-   Vytvoří se automaticky v detailu
 ========================================================= */
 
 const modalContent =
@@ -120,9 +192,11 @@ async function loadGoogleSheet(url) {
     await fetch(url);
 
   if (!response.ok) {
+
     throw new Error(
       "Google Sheet se nepodařilo načíst."
     );
+
   }
 
   const text =
@@ -138,9 +212,11 @@ async function loadGoogleSheet(url) {
     start === -1 ||
     end === -1
   ) {
+
     throw new Error(
       "Neplatná odpověď Google Sheetu."
     );
+
   }
 
   return JSON.parse(
@@ -149,11 +225,12 @@ async function loadGoogleSheet(url) {
       end + 1
     )
   );
+
 }
 
 
 /* =========================================================
-   START
+   LOAD TEAM
 ========================================================= */
 
 async function loadTeam() {
@@ -166,12 +243,6 @@ async function loadTeam() {
       </div>
     `;
 
-
-    /*
-      Načteme současně:
-      1) PHM team
-      2) Teams
-    */
 
     const [
       peopleData,
@@ -189,33 +260,29 @@ async function loadTeam() {
     ]);
 
 
-    /* =====================================================
-       TEAM LOOKUP
-    ===================================================== */
-
     const teamLookup =
       buildTeamLookup(
         teamsData
       );
 
 
-    /* =====================================================
-       PEOPLE SHEET
+    /*
+      PHM team sheet
 
-       A = ID
-       B = Group
-       C = First name/Nick
-       D = Full name
-       E = Job title
-       F = Photo 1 URL
-       G = Photo 2 URL
-       H = Detail
-       I = Email
-       J = PHM Since
-       K = Order
-       L = Active
-       M = Teams
-    ===================================================== */
+      A = ID
+      B = Group
+      C = First name/Nick
+      D = Full name
+      E = Job title
+      F = Photo 1 URL
+      G = Photo 2 URL
+      H = Detail
+      I = Email
+      J = PHM Since
+      K = Order
+      L = Active
+      M = Teams
+    */
 
     const rows =
       peopleData.table.rows || [];
@@ -308,16 +375,6 @@ async function loadTeam() {
                 )
               ),
 
-            /*
-              M = Teams
-
-              podporuje:
-              Fanklub Lev Praha, Platidlo.com
-
-              i:
-              Fanklub Lev Praha; Platidlo.com
-            */
-
             teams:
               splitTeams(
                 getCell(
@@ -331,10 +388,6 @@ async function loadTeam() {
         }
       );
 
-
-    /* =====================================================
-       FILTER + SORT
-    ===================================================== */
 
     const visibleMembers =
       team
@@ -428,12 +481,8 @@ function buildTeamLookup(data) {
   });
 
 
-  console.log(
-    "PHM teams loaded:",
-    lookup
-  );
-
   return lookup;
+
 }
 
 
@@ -454,16 +503,12 @@ function splitTeams(value) {
         team.trim()
     )
     .filter(Boolean);
+
 }
 
 
 /* =========================================================
    NORMALIZE TEXT
-
-   Odstraníme rozdíly v:
-   - velikosti písmen
-   - mezerách
-   - diakritice
 ========================================================= */
 
 function normalizeText(value) {
@@ -480,6 +525,7 @@ function normalizeText(value) {
       /\s+/g,
       " "
     );
+
 }
 
 
@@ -503,21 +549,26 @@ function getCell(
     cell.f !== undefined &&
     cell.f !== null
   ) {
+
     return String(
       cell.f
     );
+
   }
 
   if (
     cell.v !== undefined &&
     cell.v !== null
   ) {
+
     return String(
       cell.v
     );
+
   }
 
   return "";
+
 }
 
 
@@ -538,6 +589,7 @@ function parseBoolean(value) {
     normalized === "yes" ||
     normalized === "ano"
   );
+
 }
 
 
@@ -573,6 +625,7 @@ function renderTeam(
     hideArrows();
 
     return;
+
   }
 
 
@@ -635,10 +688,9 @@ function renderTeam(
           </div>
 
         </div>
+
       `;
 
-
-      /* klik */
 
       card.addEventListener(
         "click",
@@ -648,8 +700,6 @@ function renderTeam(
           )
       );
 
-
-      /* keyboard */
 
       card.addEventListener(
         "keydown",
@@ -681,6 +731,7 @@ function renderTeam(
 
 
   showArrowsIfNeeded();
+
 }
 
 
@@ -721,8 +772,6 @@ function openMember(person) {
     );
 
 
-  /* DETAIL PHOTO */
-
   modalPhoto.src =
     person.photo2 ||
     person.photo1 ||
@@ -732,16 +781,12 @@ function openMember(person) {
     person.fullName;
 
 
-  /* TEXT */
-
   modalName.textContent =
     person.fullName;
 
   modalJob.textContent =
     person.jobTitle;
 
-
-  /* PHM SINCE */
 
   if (person.since) {
 
@@ -759,13 +804,9 @@ function openMember(person) {
   }
 
 
-  /* DETAIL */
-
   modalDetail.textContent =
     person.detail || "";
 
-
-  /* EMAIL */
 
   if (person.email) {
 
@@ -786,14 +827,10 @@ function openMember(person) {
   }
 
 
-  /* TEAM LOGOS */
-
   renderMemberTeams(
     person.teams
   );
 
-
-  /* SHOW */
 
   modal.classList.add(
     "open"
@@ -801,6 +838,7 @@ function openMember(person) {
 
   document.body.style.overflow =
     "hidden";
+
 }
 
 
@@ -814,11 +852,6 @@ function renderMemberTeams(teams) {
     "";
 
 
-  /*
-    Prázdné M?
-    Nic nezobrazujeme.
-  */
-
   if (
     !teams ||
     teams.length === 0
@@ -828,6 +861,7 @@ function renderMemberTeams(teams) {
       "none";
 
     return;
+
   }
 
 
@@ -845,11 +879,6 @@ function renderMemberTeams(teams) {
       );
 
 
-    /*
-      Pokud tým není nalezen
-      v Teams!A, jen ho přeskočíme.
-    */
-
     if (!team) {
 
       console.warn(
@@ -857,6 +886,7 @@ function renderMemberTeams(teams) {
       );
 
       return;
+
     }
 
 
@@ -867,12 +897,6 @@ function renderMemberTeams(teams) {
 
     item.className =
       "modal-team-logo";
-
-
-    /*
-      Native browser tooltip
-      po najetí myší
-    */
 
     item.title =
       team.name;
@@ -892,11 +916,6 @@ function renderMemberTeams(teams) {
     img.loading =
       "lazy";
 
-
-    /*
-      Pokud jedno logo nefunguje,
-      neshodí to celý detail.
-    */
 
     img.addEventListener(
       "error",
@@ -921,17 +940,21 @@ function renderMemberTeams(teams) {
   });
 
 
-  if (foundLogos === 0) {
+  if (
+    foundLogos === 0
+  ) {
 
     modalTeams.style.display =
       "none";
 
     return;
+
   }
 
 
   modalTeams.style.display =
     "flex";
+
 }
 
 
@@ -1015,6 +1038,7 @@ function getCardStep() {
     card.offsetWidth +
     gap
   );
+
 }
 
 
@@ -1059,6 +1083,7 @@ function hideArrows() {
 
   nextBtn.style.display =
     "none";
+
 }
 
 
@@ -1069,6 +1094,7 @@ function showArrowsIfNeeded() {
 
   nextBtn.style.display =
     "";
+
 }
 
 
@@ -1101,11 +1127,13 @@ function escapeHTML(value) {
       "'",
       "&#039;"
     );
+
 }
 
 
 /* =========================================================
-   GO
+   START
 ========================================================= */
 
+applyGroupHeading();
 loadTeam();
